@@ -9,10 +9,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/dgkanatsios/AksNodePublicIPController/pkg/helpers"
-	"github.com/dgkanatsios/AksNodePublicIPController/pkg/signals"
+	"github.com/wallyqs/AksNodePublicIPController/pkg/helpers"
+	"github.com/wallyqs/AksNodePublicIPController/pkg/signals"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// start the leader election code loop
-	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+	leaderelection.RunOrDie(context.Background(), leaderelection.LeaderElectionConfig{
 		Lock:          lock,
 		LeaseDuration: 60 * time.Second,
 		RenewDeadline: 15 * time.Second,

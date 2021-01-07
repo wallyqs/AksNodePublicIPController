@@ -10,7 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func getIPClient() (*network.PublicIPAddressesClient, error) {
