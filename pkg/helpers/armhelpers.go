@@ -3,10 +3,11 @@ package helpers
 import (
 	"context"
 	"fmt"
+	// "time"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-03-30/compute"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-30/compute"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-07-01/network"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -66,16 +67,17 @@ func createPublicIP(ctx context.Context, ipName string) (*network.PublicIPAddres
 		return nil, fmt.Errorf("cannot create Public IP address: %v", err)
 	}
 
-	err = future.WaitForCompletion(ctx, ipClient.Client)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get Public IP address CreateOrUpdate method response: %v", err)
-	}
-
+	// resp, err := future.PollUntilDone(ctx, 30*time.Second)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("cannot get Public IP address CreateOrUpdate method response: %v", err)
+	// }
 	ipAddr, err := future.Result(*ipClient)
 	if err != nil {
 		return nil, err
 	}
 	return &ipAddr, nil
+	// log.Infof("Result: %+v", resp)
+	// return *resp.PublicIPAddress, nil
 }
 
 func getVM(ctx context.Context, vmName string) (*compute.VirtualMachine, error) {
@@ -159,16 +161,16 @@ func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipN
 
 	log.Infof("Trying to assign the Public IP to the NIC for Node %s", vmName)
 
-	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), *nic)
+	_, err = nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), *nic)
 
 	if err != nil {
 		return fmt.Errorf("cannot update NIC for Node %s: %v", vmName, err)
 	}
 
-	err = future.WaitForCompletion(ctx, nicClient.Client)
-	if err != nil {
-		return fmt.Errorf("cannot get NIC CreateOrUpdate response for Node %s: %v", vmName, err)
-	}
+	// err = future.WaitForCompletion(ctx, nicClient.Client)
+	// if err != nil {
+	// 	return fmt.Errorf("cannot get NIC CreateOrUpdate response for Node %s: %v", vmName, err)
+	// }
 
 	log.Infof("NIC for Node %s successfully updated", vmName)
 
@@ -181,15 +183,15 @@ func (*IPUpdate) DeletePublicIP(ctx context.Context, ipName string) error {
 	if err != nil {
 		return err
 	}
-	future, err := ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
+	_, err = ipClient.Delete(ctx, spDetails.ResourceGroup, ipName)
 	if err != nil {
 		return fmt.Errorf("cannot delete Public IP address %s: %v", ipName, err)
 	}
 
-	err = future.WaitForCompletion(ctx, ipClient.Client)
-	if err != nil {
-		return fmt.Errorf("cannot get public ip address %s CreateOrUpdate method's response: %v", ipName, err)
-	}
+	// err = future.WaitForCompletion(ctx, ipClient.Client)
+	// if err != nil {
+	// 	return fmt.Errorf("cannot get public ip address %s CreateOrUpdate method's response: %v", ipName, err)
+	// }
 
 	log.Infof("IP %s successfully deleted", ipName)
 
@@ -235,30 +237,32 @@ func (*IPUpdate) DisassociatePublicIPForNode(ctx context.Context, nodeName strin
 	(*nic.IPConfigurations)[0].PublicIPAddress = nil
 
 	// update the NIC so it has a nil Public IP
-	future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), nic)
+	// future, err := nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), nic)
+	_, err = nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), nic)
 
 	if err != nil {
 		return fmt.Errorf("cannot update NIC for Node %s, error: %v", nodeName, err)
 	}
 
-	err = future.WaitForCompletion(ctx, nicClient.Client)
-	if err != nil {
-		return fmt.Errorf("cannot get NIC CreateOrUpdate response for Node %s, error: %v", nodeName, err)
-	}
+	// err = future.WaitForCompletion(ctx, nicClient.Client)
+	// if err != nil {
+	// 	return fmt.Errorf("cannot get NIC CreateOrUpdate response for Node %s, error: %v", nodeName, err)
+	// }
 
 	// there is a chance that after the scale-in operation completes, the NIC will still be alive
 	// This may happen due to a race condition between AKS calling Delete on the NIC and our code that
 	// calls CreateOrUpdate
 	// to make sure NIC gets removed, we'll just call delete on its instance
-	futureDelete, err := nicClient.Delete(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID))
+	// futureDelete, err := nicClient.Delete(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID))
+	_, err = nicClient.Delete(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID))
 	if err != nil {
 		return fmt.Errorf("cannot delete NIC for Node %s, error: %v. NIC may have already been deleted", nodeName, err)
 	}
 
-	err = futureDelete.WaitForCompletion(ctx, nicClient.Client)
-	if err != nil {
-		return fmt.Errorf("cannot get NIC Delete response for Node %s:, error: %v. NIC may have already been deleted", nodeName, err)
-	}
+	// err = futureDelete.WaitForCompletion(ctx, nicClient.Client)
+	// if err != nil {
+	// 	return fmt.Errorf("cannot get NIC Delete response for Node %s:, error: %v. NIC may have already been deleted", nodeName, err)
+	// }
 
 	return nil
 }

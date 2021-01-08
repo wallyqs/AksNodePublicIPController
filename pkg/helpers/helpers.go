@@ -55,7 +55,8 @@ func InitializeServicePrincipalDetails() error {
 		return nil
 	}
 
-	file, e := ioutil.ReadFile("/akssp/azure.json")
+	// file, e := ioutil.ReadFile("/akssp/azure.json")
+	file, e := ioutil.ReadFile("azure/azure.json")
 	if e != nil {
 		fmt.Printf("File error: %v\n", e)
 		return e

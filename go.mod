@@ -4,8 +4,12 @@ go 1.15
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.2.0
-	github.com/Azure/azure-sdk-for-go v25.1.0+incompatible
-	github.com/Azure/go-autorest v11.4.0+incompatible
+	github.com/Azure/azure-sdk-for-go v49.2.0+incompatible
+	github.com/Azure/go-autorest v14.2.0+incompatible
+	github.com/Azure/go-autorest/autorest v0.11.15
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.5
+	github.com/Azure/go-autorest/autorest/to v0.4.0
+	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -30,11 +34,11 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/spf13/pflag v1.0.3
 	go.opencensus.io v0.18.0
-	golang.org/x/crypto v0.0.0-20190211182817-74369b46fc67
-	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
+	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
-	golang.org/x/sys v0.0.0-20190213121743-983097b1a8a3
+	golang.org/x/sys v0.0.0-20190412213103-97732733099d
 	golang.org/x/text v0.3.0
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
 	google.golang.org/api v0.1.0
