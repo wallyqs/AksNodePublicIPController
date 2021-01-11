@@ -229,12 +229,12 @@ func (c *NodeController) syncHandler(key string) error {
 
 		return err // cannot list nodes
 	}
-
+	log.Infof("Found (kubectl get nodes -o wide): %v", node)
 	if !nodeHasPublicIP(node) {
 		//node does not have a Public IP
 		log.Infof("Node with name %s does not have a Public IP, trying to create one", node.Name)
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			err := c.ipUpdater.CreateOrUpdateVMPulicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
+			err := c.ipUpdater.CreateOrUpdateVMPublicIP(ctx, node.Name, helpers.GetPublicIPName(node.Name))
 			if err != nil {
 				log.Errorf("Error in creating Public IP: %s", err)
 				return err

@@ -5,7 +5,7 @@ metadata:
   name: aksnodepublicipcontroller-sa
   namespace: kube-system
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: aksnodepublicipcontroller-rbac
@@ -17,39 +17,3 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  namespace: kube-system
-  labels:
-    run: aksnodepublicipcontroller
-  name: aksnodepublicipcontroller
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      run: aksnodepublicipcontroller
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        run: aksnodepublicipcontroller
-    spec:
-      serviceAccountName: aksnodepublicipcontroller-sa
-      containers:
-      - image: docker.io/dgkanatsios/aksnodepublicipcontroller:0.2.12
-        name: aksnodepublicipcontroller
-        volumeMounts:
-          - name: akssp
-            mountPath: /akssp
-        env:
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-      volumes:
-        - name: akssp
-          hostPath:
-            path: /etc/kubernetes
-            type: Directory

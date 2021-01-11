@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kube-system
+  labels:
+    run: aksnodepublicipcontroller
+  name: aks-box
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: aksnodepublicipcontroller
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: aksnodepublicipcontroller
+    spec:
+      serviceAccountName: aksnodepublicipcontroller-sa
+      containers:
+      - image: synadia/nats-box:latest
+        command: ["tail", "-f", "/dev/null"]
+        name: aksnodepublicipcontroller
+        volumeMounts:
+          - name: akssp
+            mountPath: /akssp
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      volumes:
+        - name: akssp
+          hostPath:
+            path: /etc/kubernetes
+            type: Directory

@@ -3,7 +3,7 @@ package helpers
 import (
 	"context"
 	"fmt"
-	// "time"
+	"time"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-30/compute"
@@ -24,8 +24,9 @@ func getIPClient() (*network.PublicIPAddressesClient, error) {
 	return &ipClient, nil
 }
 
-func getVMClient() (*compute.VirtualMachinesClient, error) {
-	vmClient := compute.NewVirtualMachinesClient(spDetails.SubscriptionID)
+func getVMClient() (*compute.VirtualMachineScaleSetVMsClient, error) {
+	// vmClient := compute.NewVirtualMachineScaleSetsClient(spDetails.SubscriptionID)
+	vmClient := compute.NewVirtualMachineScaleSetVMsClient(spDetails.SubscriptionID)
 	auth, err := GetResourceManagementAuthorizer()
 	if err != nil {
 		return nil, fmt.Errorf("error in getVMClient %s", err.Error())
@@ -49,6 +50,7 @@ func createPublicIP(ctx context.Context, ipName string) (*network.PublicIPAddres
 	if err != nil {
 		return nil, err
 	}
+	// network.PublicIPAddressSkuNameStandard
 	future, err := ipClient.CreateOrUpdate(
 		ctx,
 		spDetails.ResourceGroup,
@@ -56,9 +58,13 @@ func createPublicIP(ctx context.Context, ipName string) (*network.PublicIPAddres
 		network.PublicIPAddress{
 			Name:     to.StringPtr(ipName),
 			Location: &spDetails.Location,
+			// Sku: &network.PublicIPAddressSku{
+			// 	Name: network.PublicIPAddressSkuNameStandard,
+			// },
 			PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
 				PublicIPAddressVersion:   network.IPv4,
 				PublicIPAllocationMethod: network.Dynamic, // IPv4 address created is a dynamic one
+				// PublicIPAllocationMethod: network.Static,
 			},
 		},
 	)
@@ -66,6 +72,7 @@ func createPublicIP(ctx context.Context, ipName string) (*network.PublicIPAddres
 	if err != nil {
 		return nil, fmt.Errorf("cannot create Public IP address: %v", err)
 	}
+	time.Sleep(1*time.Minute)
 
 	// resp, err := future.PollUntilDone(ctx, 30*time.Second)
 	// if err != nil {
@@ -80,12 +87,13 @@ func createPublicIP(ctx context.Context, ipName string) (*network.PublicIPAddres
 	// return *resp.PublicIPAddress, nil
 }
 
-func getVM(ctx context.Context, vmName string) (*compute.VirtualMachine, error) {
+func getVM(ctx context.Context, vmName string) (*compute.VirtualMachineScaleSetVM, error) {
 	vmClient, err := getVMClient()
 	if err != nil {
 		return nil, err
 	}
-	vm, err := vmClient.Get(ctx, spDetails.ResourceGroup, vmName, compute.InstanceView)
+	// vm, err := vmClient.Get(ctx, spDetails.ResourceGroup, vmName, compute.InstanceView)
+	// vm, err := vmClient.Get(ctx, spDetails.ResourceGroup, "aks-nodepool-000000-vmss", "0", compute.InstanceView)
 
 	if err != nil {
 		return nil, err
@@ -100,7 +108,7 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Gotten VM with name %s", vmName)
+	log.Infof("Gotten VM with name %s :: %+v", vmName, vm)
 
 	if vm.NetworkProfile == nil || len(*vm.NetworkProfile.NetworkInterfaces) == 0 {
 		return nil, fmt.Errorf("Error. Network profile for VM %s is %v and len(vm.NetworkInterfaces)=%d", vmName, vm.NetworkProfile, len(*vm.NetworkProfile.NetworkInterfaces))
@@ -109,29 +117,30 @@ func getNetworkInterface(ctx context.Context, vmName string) (*network.Interface
 	// let's get the first NIC
 	// this will be something like /subscriptions/6bd0e514-c783-4dac-92d2-6788744eee7a/resourceGroups/MC_akslala_akslala_westeurope/providers/Microsoft.Network/networkInterfaces/aks-nodepool1-26427378-nic-0
 	nicFullName := (*vm.NetworkProfile.NetworkInterfaces)[0].ID
+	// log.Infof("Network Profile %+v", vm.NetworkProfile.NetworkInterfaces[0])
 
-	log.Infof("NICFullName is %s", *nicFullName)
+	scaleSetName := getResourceName(*nicFullName)
 
-	nicName := getResourceName(*nicFullName)
+	log.Infof("NICFullName is %s :: %+v", *nicFullName, scaleSetName)
 
 	nicClient, err := getNicClient()
 	if err != nil {
 		return nil, err
 	}
 
-	networkInterface, err := nicClient.Get(ctx, spDetails.ResourceGroup, nicName, "")
+	networkInterface, err := nicClient.GetVirtualMachineScaleSetNetworkInterface(ctx, spDetails.ResourceGroup, scaleSetName, "0", scaleSetName, "")
 	return &networkInterface, err
 }
 
 type IPUpdater interface {
-	CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error
+	CreateOrUpdateVMPublicIP(ctx context.Context, vmName string, ipName string) error
 	DeletePublicIP(ctx context.Context, ipName string) error
 	DisassociatePublicIPForNode(ctx context.Context, nodeName string) error
 }
 type IPUpdate struct{}
 
 // CreateOrUpdateVMPulicIP will create a new Public IP and assign it to the Virtual Machine
-func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipName string) error {
+func (*IPUpdate) CreateOrUpdateVMPublicIP(ctx context.Context, vmName string, ipName string) error {
 
 	log.Infof("Trying to get NIC from the VM %s", vmName)
 
@@ -149,7 +158,7 @@ func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipN
 		return fmt.Errorf("Cannot create Public IP for Node %s: %v", vmName, err)
 	}
 
-	log.Infof("Public IP for Node %s created", vmName)
+	log.Infof("Public IP for Node %s created :: %+v :: Location :: %+v", vmName, ip, ip.Location)
 
 	// set this IP Address to NIC's IP configuration
 	(*nic.IPConfigurations)[0].PublicIPAddress = ip
@@ -160,6 +169,9 @@ func (*IPUpdate) CreateOrUpdateVMPulicIP(ctx context.Context, vmName string, ipN
 	}
 
 	log.Infof("Trying to assign the Public IP to the NIC for Node %s", vmName)
+	loc := "westus"
+	nic.Location = &loc
+	log.Infof("----------------- %+v ::::: %+v", *nic.ID, *nic)
 
 	_, err = nicClient.CreateOrUpdate(ctx, spDetails.ResourceGroup, getResourceName(*nic.ID), *nic)
 
